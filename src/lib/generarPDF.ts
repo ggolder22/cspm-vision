@@ -7,32 +7,20 @@ const CLASES: Record<string, { label: string; desc: string; r: number; g: number
   D: { label: 'CLASE D', desc: 'Para estructuras',                          r: 106, g: 27,  b: 154 },
 }
 
-const INSP_LABELS: Record<string, string> = {
-  marco:      'Marco fisico',
-  vidrio:     'Vidrio frontal',
-  backsheet:  'Backsheet (dorso)',
-  celulas:    'Celulas fotovoltaicas',
-  caja:       'Caja de conexiones',
-}
-
 export const generarPDF = async (analisis: any) => {
   const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
-  
-  // Fuente proporcional
   pdf.setFont('times', 'normal')
-  
+
   const W = 210
   const M = 14
   let y = M
 
-  // ── Helpers ──
   const checkPage = (n: number) => {
     if (y + n > 282) { pdf.addPage(); y = M }
   }
 
   const txt = (
-    text: string,
-    size: number,
+    text: string, size: number,
     r: number, g: number, b: number,
     bold = false,
     align: 'left' | 'center' | 'right' = 'left'
@@ -40,11 +28,10 @@ export const generarPDF = async (analisis: any) => {
     pdf.setFontSize(size)
     pdf.setTextColor(r, g, b)
     pdf.setFont('times', bold ? 'bold' : 'normal')
-    const maxW = W - M * 2 - 4
-    const lines = pdf.splitTextToSize(String(text), maxW)
+    const lines = pdf.splitTextToSize(String(text), W - M * 2)
     const x = align === 'center' ? W / 2 : align === 'right' ? W - M : M
     pdf.text(lines, x, y, { align })
-    y += lines.length * (size * 0.45) + 3
+    y += lines.length * (size * 0.45) + 2
   }
 
   const line = () => {
@@ -53,121 +40,45 @@ export const generarPDF = async (analisis: any) => {
     y += 5
   }
 
-  const box = (r: number, g: number, b: number, h: number) => {
+  const fillBox = (r: number, g: number, b: number, h: number) => {
     pdf.setFillColor(r, g, b)
     pdf.roundedRect(M, y, W - M * 2, h, 2, 2, 'F')
   }
 
-  // const rowBox = (label: string, valor: string, nota: string, certeza: string) => {
-  //   const notaLines = nota
-  //     ? pdf.splitTextToSize(`→ ${nota}`, W - M * 2 - 8)
-  //     : []
-  //   const boxH = 14 + (notaLines.length > 0 ? notaLines.length * 5 + 2 : 0)
-  //   checkPage(boxH + 4)
+  // Fila de inspección — sin notas, solo label + certeza + valor
+  const rowInsp = (label: string, valor: string, certeza: string) => {
+    checkPage(14)
+    const esBueno = valor === 'Sin daño' || valor === 'Completa y sellada'
+    const esMedio = ['Daño leve', 'Microfisura', 'Microcrack', 'Decoloración', 'Abierta'].includes(valor)
 
-  //   const esBueno = valor === 'Sin dano' || valor === 'Sin daño' || valor === 'Completa y sellada'
-  //   const esMedio = ['Dano leve', 'Daño leve', 'Microfisuras', 'Microcrack', 'Decoloracion', 'Decoloración', 'Abierta'].includes(valor)
+    if      (esBueno) fillBox(232, 245, 233, 11)
+    else if (esMedio) fillBox(255, 243, 224, 11)
+    else              fillBox(254, 242, 242, 11)
 
-  //   if      (esBueno) box(232, 245, 233, boxH)
-  //   else if (esMedio) box(255, 243, 224, boxH)
-  //   else              box(254, 242, 242, boxH)
+    // Label
+    pdf.setFontSize(9)
+    pdf.setFont('times', 'bold')
+    pdf.setTextColor(40, 40, 40)
+    pdf.text(label, M + 3, y + 7.5)
 
-  //   // Label
-  //   pdf.setFontSize(10)
-  //   pdf.setFont('times', 'bold')
-  //   pdf.setTextColor(40, 40, 40)
-  //   pdf.text(label, M + 3, y + 7)
+    // Certeza
+    if (certeza) {
+      const cc = certeza === 'Alta' ? [26, 122, 58] : certeza === 'Media' ? [180, 60, 0] : [180, 28, 28]
+      pdf.setFontSize(7)
+      pdf.setFont('times', 'normal')
+      pdf.setTextColor(cc[0], cc[1], cc[2])
+      pdf.text(certeza, W / 2, y + 7.5, { align: 'center' })
+    }
 
-  //   // Certeza
-  //   if (certeza) {
-  //     const cc = certeza === 'Alta' ? [26, 122, 58] : certeza === 'Media' ? [180, 60, 0] : [180, 28, 28]
-  //     pdf.setFontSize(7)
-  //     pdf.setFont('times', 'normal')
-  //     pdf.setTextColor(cc[0], cc[1], cc[2])
-  //     pdf.text(`Certeza: ${certeza}`, W - M - 3, y + 4, { align: 'right' })
-  //   }
+    // Valor
+    const vc = esBueno ? [26, 122, 58] : esMedio ? [180, 60, 0] : [180, 28, 28]
+    pdf.setFontSize(9)
+    pdf.setFont('times', 'bold')
+    pdf.setTextColor(vc[0], vc[1], vc[2])
+    pdf.text(valor, W - M - 3, y + 7.5, { align: 'right' })
 
-  //   // Valor
-  //   const vc = esBueno ? [26, 122, 58] : esMedio ? [180, 60, 0] : [180, 28, 28]
-  //   pdf.setFontSize(10)
-  //   pdf.setFont('times', 'bold')
-  //   pdf.setTextColor(vc[0], vc[1], vc[2])
-  //   pdf.text(valor, W - M - 3, y + 10, { align: 'right' })
-
-  //   y += 14
-
-  //   // Nota
-  //   if (notaLines.length > 0) {
-  //     pdf.setFontSize(8)
-  //     pdf.setFont('times', 'normal')
-  //     pdf.setTextColor(90, 90, 90)
-  //     pdf.text(notaLines, M + 3, y)
-  //     y += notaLines.length * 5 + 3
-  //   } else {
-  //     y += 3
-  //   }
-  // }
-
-  const rowBox = (label: string, valor: string, nota: string, certeza: string) => {
-  // Primero calcular cuántas líneas necesita la nota
-  pdf.setFontSize(8)
-  pdf.setFont('times', 'normal')
-  const maxNotaW = W - M * 2 - 8
-  const notaLines = nota
-    ? pdf.splitTextToSize(`→ ${nota}`, maxNotaW)
-    : []
-  
-  // Calcular altura total del box
-  const boxH = 14 + (notaLines.length > 0 ? notaLines.length * 5 + 4 : 0)
-  checkPage(boxH + 6)
-
-  const esBueno = valor === 'Sin daño' || valor === 'Sin dano' || valor === 'Completa y sellada'
-  const esMedio = ['Daño leve','Dano leve','Microfisuras','Microcrack','Decoloración','Decoloracion','Abierta'].includes(valor)
-
-  if      (esBueno) box(232, 245, 233, boxH)
-  else if (esMedio) box(255, 243, 224, boxH)
-  else              box(254, 242, 242, boxH)
-
-  const yStart = y
-
-  // Label izquierda
-  pdf.setFontSize(10)
-  pdf.setFont('times', 'bold')
-  pdf.setTextColor(40, 40, 40)
-  pdf.text(label, M + 3, yStart + 7)
-
-  // Certeza arriba a la derecha
-  if (certeza) {
-    const cc = certeza === 'Alta' ? [26,122,58] : certeza === 'Media' ? [180,60,0] : [180,28,28]
-    pdf.setFontSize(7)
-    pdf.setFont('times', 'normal')
-    pdf.setTextColor(cc[0], cc[1], cc[2])
-    pdf.text(`Certeza: ${certeza}`, W - M - 3, yStart + 4, { align: 'right' })
+    y += 13
   }
-
-  // Valor abajo a la derecha
-  const vc = esBueno ? [26,122,58] : esMedio ? [180,60,0] : [180,28,28]
-  pdf.setFontSize(10)
-  pdf.setFont('times', 'bold')
-  pdf.setTextColor(vc[0], vc[1], vc[2])
-  pdf.text(valor, W - M - 3, yStart + 10, { align: 'right' })
-
-  y = yStart + 14
-
-  // Nota con todas las líneas
-  if (notaLines.length > 0) {
-    pdf.setFontSize(8)
-    pdf.setFont('times', 'normal')
-    pdf.setTextColor(90, 90, 90)
-    notaLines.forEach((linea: string) => {
-      pdf.text(linea, M + 3, y)
-      y += 5
-    })
-    y += 3
-  } else {
-    y += 3
-  }
-}
 
   // ══ ENCABEZADO ══
   pdf.setFillColor(26, 46, 26)
@@ -231,7 +142,6 @@ export const generarPDF = async (analisis: any) => {
         pdf.text('Dorso', x + imgW / 2, y + imgH + 4, { align: 'center' })
       } catch {}
     }
-
     y += imgH + 10
   }
 
@@ -239,14 +149,12 @@ export const generarPDF = async (analisis: any) => {
   if (analisis.marca || analisis.modelo) {
     checkPage(30)
     txt('INFORMACION DEL PANEL', 8, 120, 120, 120)
-    if (analisis.marca)  txt(`Marca: ${analisis.marca}`,   11, 26, 46, 26, true)
+    if (analisis.marca)  txt(`Marca:  ${analisis.marca}`,  11, 26, 46, 26, true)
     if (analisis.modelo) txt(`Modelo: ${analisis.modelo}`, 11, 26, 46, 26, true)
 
     const params = [
-      ['VOC',  analisis.nom_voc],
-      ['ISC',  analisis.nom_isc],
-      ['VMP',  analisis.nom_vmp],
-      ['IMP',  analisis.nom_imp],
+      ['VOC', analisis.nom_voc], ['ISC', analisis.nom_isc],
+      ['VMP', analisis.nom_vmp], ['IMP', analisis.nom_imp],
       ['PMAX', analisis.nom_pmax],
     ].filter(([, v]) => v)
 
@@ -260,13 +168,11 @@ export const generarPDF = async (analisis: any) => {
 
   // ══ CLASIFICACIÓN ══
   checkPage(35)
-  const claseKey = analisis.fue_corregida ? analisis.clasificacion_final : analisis.ia_clasificacion
-  const cl = CLASES[claseKey] || CLASES['B']
-  const clLabel = analisis.fue_corregida
-    ? `${cl.label} (corregida por operario)`
-    : cl.label
+  const claveClase = analisis.fue_corregida ? analisis.clasificacion_final : analisis.ia_clasificacion
+  const cl = CLASES[claveClase] || CLASES['B']
+  const clLabel = analisis.fue_corregida ? `${cl.label} (corregida por operario)` : cl.label
 
-  box(cl.r, cl.g, cl.b, 26)
+  fillBox(cl.r, cl.g, cl.b, 26)
   pdf.setFontSize(20)
   pdf.setTextColor(255, 255, 255)
   pdf.setFont('times', 'bold')
@@ -277,60 +183,53 @@ export const generarPDF = async (analisis: any) => {
   y += 30
 
   if (analisis.fue_corregida) {
-    txt(
-      `IA sugirio: ${CLASES[analisis.ia_clasificacion]?.label || ''} (${analisis.ia_confianza}% confianza)`,
-      8, 150, 150, 150, false, 'center'
-    )
-    if (analisis.motivo_correccion) {
-      txt(`Motivo: "${analisis.motivo_correccion}"`, 9, 100, 100, 100, false, 'center')
-    }
+    txt(`IA sugirio: ${CLASES[analisis.ia_clasificacion]?.label || ''} (${analisis.ia_confianza}% confianza)`, 8, 150, 150, 150, false, 'center')
+    if (analisis.motivo_correccion) txt(`Motivo: "${analisis.motivo_correccion}"`, 9, 100, 100, 100, false, 'center')
   } else {
-    txt(
-      `Confianza: ${analisis.ia_confianza}%   |   Certeza: ${analisis.ia_certeza}`,
-      9, 100, 100, 100, false, 'center'
-    )
+    txt(`Confianza: ${analisis.ia_confianza}%   |   Certeza: ${analisis.ia_certeza}`, 9, 100, 100, 100, false, 'center')
   }
 
   if (analisis.requiere_limpieza) {
     y += 2
-    box(255, 251, 230, 10)
+    fillBox(255, 251, 230, 10)
     pdf.setFontSize(8)
     pdf.setTextColor(138, 80, 0)
     pdf.setFont('times', 'bold')
-    pdf.text(
-      'ATENCION: Panel requiere limpieza previa - clasificacion provisional',
-      W / 2, y + 6.5, { align: 'center' }
-    )
+    pdf.text('ATENCION: Panel requiere limpieza previa - clasificacion provisional', W / 2, y + 6.5, { align: 'center' })
     y += 14
   }
-
   line()
 
-  // ══ INSPECCIÓN ══
+  // ══ INSPECCIÓN POR COMPONENTE ══
   checkPage(20)
-  txt('INSPECCION POR COMPONENTE', 8, 120, 120, 120)
-  y += 1
+
+  // Encabezado de tabla
+  fillBox(240, 240, 240, 10)
+  pdf.setFontSize(8)
+  pdf.setFont('times', 'bold')
+  pdf.setTextColor(80, 80, 80)
+  pdf.text('COMPONENTE', M + 3, y + 7)
+  pdf.text('CERTEZA', W / 2, y + 7, { align: 'center' })
+  pdf.text('ESTADO', W - M - 3, y + 7, { align: 'right' })
+  y += 12
 
   const inspItems = [
-    { label: 'Marco fisico',          val: analisis.insp_marco,     certeza: analisis.insp_marco_certeza,     nota: analisis.insp_marco_nota     },
-    { label: 'Vidrio frontal',        val: analisis.insp_vidrio,    certeza: analisis.insp_vidrio_certeza,    nota: analisis.insp_vidrio_nota    },
-    { label: 'Backsheet (dorso)',      val: analisis.insp_backsheet, certeza: analisis.insp_backsheet_certeza, nota: analisis.insp_backsheet_nota },
-    { label: 'Celulas fotovoltaicas', val: analisis.insp_celulas,   certeza: analisis.insp_celulas_certeza,   nota: analisis.insp_celulas_nota   },
-    { label: 'Caja de conexiones',    val: analisis.insp_caja,      certeza: analisis.insp_caja_certeza,      nota: analisis.insp_caja_nota      },
+    { label: 'Marco fisico',          val: analisis.insp_marco,     certeza: analisis.insp_marco_certeza     },
+    { label: 'Vidrio frontal',        val: analisis.insp_vidrio,    certeza: analisis.insp_vidrio_certeza    },
+    { label: 'Backsheet (dorso)',      val: analisis.insp_backsheet, certeza: analisis.insp_backsheet_certeza },
+    { label: 'Celulas fotovoltaicas', val: analisis.insp_celulas,   certeza: analisis.insp_celulas_certeza   },
+    { label: 'Caja de conexiones',    val: analisis.insp_caja,      certeza: analisis.insp_caja_certeza      },
   ]
 
-  inspItems.forEach(({ label, val, certeza, nota }) => {
-    if (val) rowBox(label, val, nota || '', certeza || '')
+  inspItems.forEach(({ label, val, certeza }) => {
+    if (val) rowInsp(label, val, certeza || '')
   })
-
   line()
 
   // ══ DIAGNÓSTICO ══
   checkPage(20)
   txt('DIAGNOSTICO', 8, 120, 120, 120)
-  if (analisis.ia_justificacion) {
-    txt(analisis.ia_justificacion, 10, 60, 60, 60)
-  }
+  if (analisis.ia_justificacion) txt(analisis.ia_justificacion, 10, 60, 60, 60)
   line()
 
   // ══ ALERTAS ══
@@ -338,10 +237,7 @@ export const generarPDF = async (analisis: any) => {
   if (alertas.length > 0) {
     checkPage(16)
     txt('ALERTAS', 9, 185, 28, 28, true)
-    alertas.forEach((a: string) => {
-      checkPage(10)
-      txt(`• ${a}`, 10, 185, 28, 28)
-    })
+    alertas.forEach((a: string) => { checkPage(10); txt(`• ${a}`, 10, 185, 28, 28) })
     line()
   }
 
@@ -350,20 +246,14 @@ export const generarPDF = async (analisis: any) => {
   if (recom.length > 0) {
     checkPage(16)
     txt('RECOMENDACIONES', 9, 45, 106, 45, true)
-    recom.forEach((r: string) => {
-      checkPage(10)
-      txt(`• ${r}`, 10, 45, 106, 45)
-    })
+    recom.forEach((r: string) => { checkPage(10); txt(`• ${r}`, 10, 45, 106, 45) })
     line()
   }
 
   // ══ PIE ══
   checkPage(10)
   y += 4
-  txt(
-    'CSPM Vision AI  |  Economia Circular RAEE  |  Documento generado automaticamente',
-    7, 180, 180, 180, false, 'center'
-  )
+  txt('CSPM Vision AI  |  Economia Circular RAEE  |  Documento generado automaticamente', 7, 180, 180, 180, false, 'center')
 
   // ══ GUARDAR ══
   const fechaArchivo = new Date().toISOString().slice(0, 10)

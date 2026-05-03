@@ -225,7 +225,7 @@ export default function Home() {
 
             <button onClick={analizar} disabled={analizando || (!frenteFile && !dorsoFile)}
               style={{ width: '100%', background: analizando ? '#aaa' : '#2d6a2d', color: '#fff', border: 'none', borderRadius: 10, padding: 14, fontSize: 16, fontWeight: 700, cursor: analizando ? 'not-allowed' : 'pointer' }}>
-              {analizando ? '⏳ Analizando con IA...' : '🔍 Analizar panel'}
+              {analizando ? '⏳ Analizando panel...' : '🔍 Analizar panel'}
             </button>
             {analizando && (
               <div style={{ textAlign: 'center', color: '#666', fontSize: 13, marginTop: 10 }}>
