@@ -194,7 +194,7 @@ export default function Home() {
                 { label: '📷 Foto dorso',  preview: dorsoPreview,  ref: dorsoRef,  tipo: 'dorso'  as const },
               ]).map(({ label, preview, ref, tipo }) => (
                 <div key={tipo}>
-                  <input type="file" accept="image/*" capture="environment" ref={ref}
+                  <input type="file" accept="image/*" ref={ref}
                     onChange={e => e.target.files?.[0] && handleFile(e.target.files[0], tipo)}
                     style={{ display: 'none' }} />
                   <div onClick={() => ref.current?.click()}
