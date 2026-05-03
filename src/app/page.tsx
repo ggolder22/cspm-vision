@@ -44,6 +44,34 @@ const ESTADO_COLORS: Record<string, { color: string; bg: string }> = {
 
 const getColor = (val: string) => ESTADO_COLORS[val] || { color: '#555', bg: '#f5f5f5' }
 
+
+// const fileToBase64 = (file: File): Promise<string> =>
+//   new Promise((res, rej) => {
+//     const reader = new FileReader()
+//     reader.onload = () => res((reader.result as string).split(',')[1])
+//     reader.onerror = rej
+//     reader.readAsDataURL(file)
+//   })
+
+const convertirAJpeg = (file: File): Promise<File> =>
+  new Promise((res) => {
+    const url = URL.createObjectURL(file)
+    const img = new Image()
+    img.onload = () => {
+      const canvas = document.createElement('canvas')
+      canvas.width = img.width
+      canvas.height = img.height
+      canvas.getContext('2d')!.drawImage(img, 0, 0)
+      canvas.toBlob((blob) => {
+        if (blob) res(new File([blob], 'panel.jpg', { type: 'image/jpeg' }))
+        else res(file)
+      }, 'image/jpeg', 0.85)
+      URL.revokeObjectURL(url)
+    }
+    img.onerror = () => res(file)
+    img.src = url
+  })
+
 const fileToBase64 = (file: File): Promise<string> =>
   new Promise((res, rej) => {
     const reader = new FileReader()
@@ -51,6 +79,8 @@ const fileToBase64 = (file: File): Promise<string> =>
     reader.onerror = rej
     reader.readAsDataURL(file)
   })
+
+
 
 export default function Home() {
   const [frenteFile, setFrenteFile]       = useState<File | null>(null)
@@ -86,8 +116,18 @@ export default function Home() {
     setAnalisisId(null); setGuardadoOk(false)
     try {
       const imagenes: any = {}
-      if (frenteFile) imagenes.frente = { data: await fileToBase64(frenteFile), tipo: frenteFile.type }
-      if (dorsoFile)  imagenes.dorso  = { data: await fileToBase64(dorsoFile),  tipo: dorsoFile.type  }
+        if (frenteFile) {
+          const f = await convertirAJpeg(frenteFile)
+          imagenes.frente = { data: await fileToBase64(f), tipo: 'image/jpeg' }
+        }
+        if (dorsoFile) {
+          const d = await convertirAJpeg(dorsoFile)
+          imagenes.dorso = { data: await fileToBase64(d), tipo: 'image/jpeg' }
+        }
+      
+      
+      
+      
       const res  = await fetch('/api/analizar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
