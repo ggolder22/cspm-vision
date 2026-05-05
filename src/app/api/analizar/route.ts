@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
     content.push({ type: 'text', text: 'Analiza estas imagenes y responde con el JSON de diagnostico.' })
 
     const response = await client.messages.create({
-      model: 'claude-opus-4-5',
+      model: 'claude-sonnet-4-6',
       max_tokens: 1500,
       system: PROMPT,
       messages: [{ role: 'user', content }],

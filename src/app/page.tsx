@@ -53,22 +53,25 @@ const getColor = (val: string) => ESTADO_COLORS[val] || { color: '#555', bg: '#f
 //     reader.readAsDataURL(file)
 //   })
 
+const MAX_DIM = 1920
+
 const convertirAJpeg = (file: File): Promise<File> =>
   new Promise((res) => {
     const url = URL.createObjectURL(file)
     const img = new Image()
     img.onload = () => {
+      const scale = Math.min(1, MAX_DIM / Math.max(img.width, img.height))
       const canvas = document.createElement('canvas')
-      canvas.width = img.width
-      canvas.height = img.height
-      canvas.getContext('2d')!.drawImage(img, 0, 0)
+      canvas.width  = Math.round(img.width  * scale)
+      canvas.height = Math.round(img.height * scale)
+      canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height)
       canvas.toBlob((blob) => {
+        URL.revokeObjectURL(url)
         if (blob) res(new File([blob], 'panel.jpg', { type: 'image/jpeg' }))
         else res(file)
       }, 'image/jpeg', 0.85)
-      URL.revokeObjectURL(url)
     }
-    img.onerror = () => res(file)
+    img.onerror = () => { URL.revokeObjectURL(url); throw new Error('No se pudo leer la imagen. Intentá con otra foto.') }
     img.src = url
   })
 
